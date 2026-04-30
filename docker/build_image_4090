@@ -1,0 +1,4 @@
+#!/usr/bin/bash
+container_name=contourpose-baseline-4090
+docker stop $container_name; docker container rm $container_name
+docker build -f docker/contourpose-4090.Dockerfile -t $container_name .

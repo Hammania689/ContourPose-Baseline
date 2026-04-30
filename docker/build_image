@@ -1,0 +1,4 @@
+#!/usr/bin/bash
+container_name=contourpose-baseline
+docker stop $container_name & docker container prune -y $container_name
+docker build -f docker/contourpose.Dockerfile -t $container_name .

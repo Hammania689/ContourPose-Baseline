@@ -1,0 +1,3 @@
+#!/usr/bin/bash
+container_name=contourpose-baseline-4090
+docker start $container_name && docker exec -it $container_name bash
