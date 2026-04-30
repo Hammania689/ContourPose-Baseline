@@ -22,3 +22,6 @@ __pycache__/
 
 # Project AI assistant instructions
 CLAUDE.md
+
+# Original-file backups (history lives in git)
+*_og.py
