@@ -1,0 +1,24 @@
+# Trained model checkpoints
+model/
+
+# Experiment tracking
+wandb/
+
+# Python bytecode
+__pycache__/
+*.pyc
+*.pyo
+
+# Editor artifacts
+*.swp
+*.swo
+
+# Claude Code local config
+.claude/
+
+# Diff / patch reference files
+*.diff
+*.patch
+
+# Project AI assistant instructions
+CLAUDE.md
