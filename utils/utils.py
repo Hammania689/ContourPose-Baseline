@@ -432,3 +432,58 @@ if __name__ == "__main__":
     img = plt.imread("/home/reflex/data/LINEMOD/ape/mask/0000.png")
     img = np.array(img)
     bbox_from_mask(img)
+
+
+# ---------------------------------------------------------------------------
+# Camera intrinsics utilities — required by network/contourpose.py
+# Ported from SpectraPose fork (utils/utils.py). No existing code changed.
+# ---------------------------------------------------------------------------
+
+def load_camera_intrinsics(intrinsics_path):
+    """Load camera intrinsics from JSON, YAML, or TXT file. Returns [3,3] float32 array."""
+    import json
+    import yaml as _yaml
+
+    intrinsics_path = str(intrinsics_path)
+
+    if intrinsics_path.endswith('.json'):
+        with open(intrinsics_path, 'r') as f:
+            data = json.load(f)
+        if 'cam_K' in data:
+            return np.array(data['cam_K'], dtype=np.float32).reshape(3, 3)
+        elif 'fx' in data:
+            return np.array([[data['fx'], 0, data['cx']],
+                             [0, data['fy'], data['cy']],
+                             [0, 0, 1]], dtype=np.float32)
+        raise ValueError(f"Unknown JSON intrinsics format in {intrinsics_path}")
+
+    elif intrinsics_path.endswith(('.yaml', '.yml')):
+        with open(intrinsics_path, 'r') as f:
+            data = _yaml.safe_load(f)
+        if 'cam_K' in data:
+            return np.array(data['cam_K'], dtype=np.float32).reshape(3, 3)
+        elif 'fx' in data:
+            return np.array([[data['fx'], 0, data['cx']],
+                             [0, data['fy'], data['cy']],
+                             [0, 0, 1]], dtype=np.float32)
+        raise ValueError(f"Unknown YAML intrinsics format in {intrinsics_path}")
+
+    elif intrinsics_path.endswith('.txt'):
+        return np.loadtxt(intrinsics_path, dtype=np.float32).reshape(3, 3)
+
+    raise ValueError(f"Unsupported intrinsics file format: {intrinsics_path}")
+
+
+def get_K_override(K_override, batch_K, device=None):
+    """Return K_override (broadcast to batch) if set, else return batch_K unchanged."""
+    import torch as _torch
+    if K_override is not None:
+        K = _torch.from_numpy(K_override)
+        if device is not None:
+            K = K.to(device)
+        elif batch_K is not None:
+            K = K.to(batch_K.device)
+        if batch_K is not None and batch_K.dim() == 3:
+            K = K.unsqueeze(0).expand(batch_K.shape[0], -1, -1)
+        return K
+    return batch_K

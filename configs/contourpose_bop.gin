@@ -1,0 +1,17 @@
+# contourpose_bop.gin
+# Baseline hyperparameters matching the upstream ContourPose paper.
+# Used for clean BOP baseline experiments on RT-LESS dataset.
+# See CHANGELOG.md for rationale on any deviations from the paper.
+
+main.model_cls          = @ContourPose
+main.lr                 = 0.1
+main.batch_size         = 16
+main.epochs             = 150
+# LR schedule: step decay matching upstream ContourPose paper
+# step_size=20, gamma=0.5 (identical math to original adjust_learning_rate)
+# Cosine annealing is intentionally omitted — used in SpectraPose repo only
+main.lr_step_size       = 20
+main.lr_gamma           = 0.5
+main.val_interval       = 10
+main.viz_interval       = 10
+main.compute_edge_input = False
