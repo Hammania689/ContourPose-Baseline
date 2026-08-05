@@ -1,3 +1,18 @@
+## edd14bc - Add eval_legacy_all_scenes.py, eval_rtless_authors.sh, and RT_Less.md
+
+### Added
+- `eval_legacy_all_scenes.py`: Evaluation driver that runs `eval.py`'s evaluator across
+  all scenes for a given object and aggregates metrics. Produced the official RT-Less PECP
+  results (`260609_0543_pecp`). Supports single-object and all-objects modes, optional PECP,
+  and saves `results.csv`, `run.log`, and `summary.txt` per run.
+- `eval_rtless_authors.sh`: Canonical invocation record for the official RT-Less evaluation
+  (renamed from `_tmp_rt-less_paper_eval.sh`). Contains both the no-PECP and PECP commands
+  against the author's checkpoints and original ContourPose dataset layout.
+- `RT_Less.md`: Dataset structure reference and evaluation findings for the RT-Less baseline,
+  including the object→scene→index table, missing scenes, and analysis of obj21 scene 29.
+
+---
+
 ## fd28ae3 - Evaluator fixes, analysis scripts, and rotation error utilities
 
 ### Fixed
