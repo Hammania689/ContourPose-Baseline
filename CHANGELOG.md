@@ -1,4 +1,43 @@
+## August 2026 — Evaluator fixes, analysis scripts, and rotation error utilities
+`fd28ae3`
+
+### Fixed
+- `eval.py` (`evaluate`): Was returning `None` silently; now returns a metrics dict
+  (`proj_2d`, `add`, `add_raw`, translation/rotation error lists). Any caller that
+  used the return value was broken before this change.
+- `eval.py` (`evaluate`): PECP was hardcoded off (the `calculate_metric_PECP` call was
+  commented out). Dispatch is now controlled by `args.use_pecp`; non-PECP path is the
+  default, matching the original `main.py` behaviour.
+- `main.py`: `model_path` was hardcoded to `model/{class_type}`; now uses a required
+  `--model_dir` argument so arbitrary checkpoint directories can be targeted.
+- `network/contourpose.py` (`_init_geo_info`): Crashed when `data_root` or `class_type`
+  was `None` (e.g. when the network is instantiated from the legacy `eval.py` path which
+  does not supply those). Now returns early in that case.
+- `network/contourpose.py` (`_init_geo_info`): Keypoints were scaled by `* 1000` (m → mm)
+  after loading, producing wrong units for PnP. Removed; keypoints are now loaded in their
+  native metre units, consistent with the mesh and pose tensors.
+- `dataset/Dataset.py`: `yaml.load()` → `yaml.safe_load()` (train and test paths).
+
+### Added
+- `eval.py`: `add_raw` list captures the continuous per-frame ADD distance (same units as
+  mesh pts) alongside the existing boolean `add` list. Enables per-frame distribution
+  analysis without re-implementing ADD.
+- `utils/utils.py`: `geodesic_rotation_error`, `_optimal_continuous_symmetry_rotation`,
+  and `min_symmetry_rotation_error` — utilities for computing rotation error under discrete
+  and continuous object symmetries.
+- `docs/pecp_notes.md`: Documents PECP stochasticity (unseeded `random.choice` in the 400-
+  iteration subset loop), observed ~1 pp run-to-run variance, and how to seed for
+  reproducibility.
+- `scripts/check_gt_scene29.py`: Verifies GT soundness for obj21 scene 29 across all 416
+  frames (slot-0 obj_id consistency, centroid in-bounds, CAD mask overlap).
+- `scripts/add_distribution_scene29.py`: Produces per-frame ADD distribution figures
+  (log-scale histogram PDF + per-frame scatter) for obj21 scene 29, using the evaluator
+  directly so numbers match the official PECP run exactly.
+
+---
+
 ## May 13–14 — Legacy eval pipeline and LaTeX table notebook
+`fd28ae3`
 
 ### Added
 - `test_legacy_eval.py`: Duplicate of `test.py` that uses `eval.py` (the original
