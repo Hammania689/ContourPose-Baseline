@@ -1,4 +1,4 @@
-## August 2026 — Evaluator fixes, analysis scripts, and rotation error utilities
+## Evaluator fixes, analysis scripts, and rotation error utilities
 `fd28ae3`
 
 ### Fixed
@@ -36,7 +36,7 @@
 
 ---
 
-## May 13–14 — Legacy eval pipeline and LaTeX table notebook
+## Legacy eval pipeline and LaTeX table notebook
 `fd28ae3`
 
 ### Added
@@ -67,7 +67,7 @@
 
 ---
 
-## April 30 — Add train_all_objects.sh
+## Add train_all_objects.sh
 `f4378f0`
 
 ### Added
@@ -82,7 +82,7 @@
 
 ---
 
-## April 30 — Add Docker environment
+## Add Docker environment
 `df910c3`
 
 ### Added
@@ -102,7 +102,7 @@
 
 ---
 
-## April 30 — Refactor network.py into network/ package
+## Refactor network.py into network/ package
 `1d2f982`
 
 ### Changed
@@ -117,7 +117,7 @@
 
 ---
 
-## April 27 — Add BOP training stack with StepLR scheduling
+## Add BOP training stack with StepLR scheduling
 `69e09de`
 
 ### Added
@@ -162,7 +162,7 @@
 
 ---
 
-## April 27 — Add .gitignore
+## Add .gitignore
 `c7d257b` `239fa00`
 
 ### Added
