@@ -16,10 +16,13 @@ then
     chmod a+r $XAUTH
 fi
 
-data_path=/mnt/bigbertha_mount/GithubWorkspace/ContourPose/data
+data_path1=/mnt/bigbertha_mount/GithubWorkspace/ContourPose/data
+data_path2=/mnt/bigbertha_mount/data
+repo_path=/mnt/bigbertha_mount/GithubWorkspace/ContourPose-Baseline
 container_name=contourpose-baseline-4090
 img_name=$container_name
 
+# --volume=/mnt/bigbertha_mount/data/Datasets/ContourPose/SUN2012pascalformat:/data/Datasets/ContourPose/SUN2012pascalformat \
 
 docker stop $container_name & docker container rm $container_name 
 
@@ -27,13 +30,13 @@ docker run -it \
 	--name $container_name \
 	--volume=$XSOCK:$XSOCK:rw \
         --volume=$XAUTH:$XAUTH:rw \
-	--volume=$data_path:/data \
-	--volume=/mnt/bigbertha_mount/data/Datasets/ContourPose/SUN2012pascalformat:/data/Datasets/ContourPose/SUN2012pascalformat \
 	-p=9000:9000/tcp \
 	-p=7000:7000/tcp \
         --volume=/dev:/dev \
         --privileged \
-        --volume=$PWD:/$container_name \
+        --volume=$repo_path:/$container_name \
+	--volume=$data_path1:/$container_name/data \
+	--volume=$data_path2:/data \
         -w /$container_name \
 	--env="XAUTHORITY=$XAUTH" \
 	--env="DISPLAY=$DISPLAY" \

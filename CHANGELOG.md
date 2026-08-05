@@ -1,3 +1,33 @@
+## May 13–14 — Legacy eval pipeline and LaTeX table notebook
+
+### Added
+- `test_legacy_eval.py`: Duplicate of `test.py` that uses `eval.py` (the original
+  ContourPose evaluator) instead of `eval_spectra_pose.py`. Intended for apples-to-apples
+  comparison with prior `main.py`-based experiments. Key differences from `test.py`:
+  imports `from eval import evaluator`, drops the `samples_metadata` argument (plain
+  `eval.py` does not accept it), and guards the summary print against the `None` return
+  that `eval.py`'s `evaluate()` produces.
+- `eval_all_rtless_legacy.sh`: Companion script to `eval_all_rtless.sh` that drives
+  `test_legacy_eval.py` across all 10 objects using the original ContourPose dataset
+  layout (`data/ContourPose_Original/` by default, overridable via `DATA_PATH`).
+  PECP is disabled by default (`--no_pecp`) to match the original `main.py` behaviour;
+  pass `--pecp` to enable it. Scene/index assignments are derived from `sceneObjs.yml`;
+  several objects appear in multiple scenes — see the comments in the script for
+  alternatives.
+- `scripts/make_latex_table.ipynb`: Jupyter notebook that reads per-object
+  `masked_detailed.csv` files from `results/rtless_paper/` and generates a LaTeX
+  comparison table (ADD(-S) % reproduced vs. paper-reported values). Bold-faces the
+  better value per row and writes output to `results/table_add.tex`.
+
+### Fixed
+- `README.md`: Object index mapping table had `obj18` listed twice (for both paper obj7
+  and obj8). Corrected paper obj8 → code `obj6`, which is the only code object absent
+  from the original mapping.
+- `dataset/data_utils.py` (`create_test_loader`): Removed `data_root` keyword argument
+  passed to `MyDataset.__init__`, which does not accept that parameter.
+
+---
+
 ## April 30 — Add train_all_objects.sh
 `f4378f0`
 

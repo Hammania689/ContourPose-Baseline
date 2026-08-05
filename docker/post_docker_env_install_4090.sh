@@ -1,5 +1,6 @@
 #!/bin/bash
 set -e  # Exit on error
+apt update
 
 # pycairo builds from source and needs these system libraries (no pre-built wheel available)
 echo "Installing system build dependencies..."

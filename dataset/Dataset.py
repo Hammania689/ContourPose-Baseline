@@ -37,14 +37,14 @@ class MyDataset(Dataset):
 
         if is_train:
             self.path = osp.join(self.root, "train", self.cls)
-            self.K = yaml.load(open(osp.join(self.path, 'Intrinsic.yml'), 'r'))
-            self.train_pose = yaml.load(open(osp.join(self.path, 'gt.yml'), 'r'))
+            self.K = yaml.safe_load(open(osp.join(self.path, 'Intrinsic.yml'), 'r'))
+            self.train_pose = yaml.safe_load(open(osp.join(self.path, 'gt.yml'), 'r'))
             self.data_paths = self.get_train_data_path(self.root, self.cls)
 
         else:
             self.path = osp.join(self.root, "test/scene{}".format(str(self.scene)))
-            self.K = yaml.load(open(osp.join(self.path, 'Intrinsic.yml'), 'r'))
-            self.train_pose = yaml.load(open(osp.join(self.path, 'gt.yml'), 'r'))
+            self.K = yaml.safe_load(open(osp.join(self.path, 'Intrinsic.yml'), 'r'))
+            self.train_pose = yaml.safe_load(open(osp.join(self.path, 'gt.yml'), 'r'))
             self.data_paths = self.get_test_data_path()
 
     def get_train_data_path(self, root, cls):

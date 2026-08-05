@@ -33,6 +33,7 @@ class evaluator:
         self.proj_2d = []
         self.proj_2d_mean = []
         self.add = []
+        self.add_raw = []  # raw per-frame ADD distance (same units as mesh pts)
         self.x_error_all = []
         self.y_error_all = []
         self.z_error_all = []
@@ -64,8 +65,10 @@ class evaluator:
 
                 pred_heatmap, pred_contour = self.model(img)
                 keypoints_2d, predict_2d = self.map_2_points(heatmap, pred_heatmap)
-                self.calculate_metric(keypoints_2d, predict_2d, K)
-                # self.calculate_metric_PECP(keypoints_2d, predict_2d, K, pose, pred_contour)
+                if getattr(self.args, 'use_pecp', False):
+                    self.calculate_metric_PECP(keypoints_2d, predict_2d, K, pose, pred_contour)
+                else:
+                    self.calculate_metric(keypoints_2d, predict_2d, K)
 
             proj_2d_mean = np.mean(self.proj_2d)
             add_mean = np.mean(self.add)
@@ -80,6 +83,17 @@ class evaluator:
             print("translation error:{} mm".format((x ** 2 + y ** 2 + z ** 2) ** 0.5))
             print('alpha error:{} °, beta error:{} °, gamaa error:{} °'.format(alpha, beta, gamma))
             print("rotation error:{} mm".format((alpha ** 2 + beta ** 2 + gamma ** 2) ** 0.5))
+            return {
+                "proj_2d": self.proj_2d,
+                "add": self.add,
+                "add_raw": self.add_raw,
+                "x_error": self.x_error_all,
+                "y_error": self.y_error_all,
+                "z_error": self.z_error_all,
+                "alpha_error": self.alpha_error_all,
+                "beta_error": self.beta_error_all,
+                "gamma_error": self.gama_error_all,
+            }
 
     def map_2_points(self, heatmap, pred_heatmap):
 
@@ -201,7 +215,7 @@ class evaluator:
         iteration_time = 400
 
         for i in range(iteration_time):
-            temp_list = choice(list_all)
+            temp_list = choice(list_all)  # unseeded — see docs/pecp_notes.md
             keypoints_2d = np.zeros((temp_list.__len__(), 2))
             keypoints_3d = np.zeros((temp_list.__len__(), 3))
             for j in range(temp_list.__len__()):
@@ -344,6 +358,7 @@ class evaluator:
             mean_dist = np.mean(mean_dist)
         else:
             mean_dist = np.mean(np.linalg.norm(model_pred - model_targets, axis=-1))
+        self.add_raw.append(float(mean_dist))
         self.add.append(mean_dist < diameter)
 
     def top_K_idx(self, data, k):

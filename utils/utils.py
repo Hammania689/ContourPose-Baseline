@@ -487,3 +487,65 @@ def get_K_override(K_override, batch_K, device=None):
             K = K.unsqueeze(0).expand(batch_K.shape[0], -1, -1)
         return K
     return batch_K
+
+
+def geodesic_rotation_error(R1, R2):
+    """Compute geodesic rotation error between two 3x3 rotation matrices in degrees."""
+    R_diff = R1.T @ R2
+    trace_val = np.trace(R_diff)
+    cos_angle = np.clip((trace_val - 1.0) / 2.0, -1.0, 1.0)
+    angle_rad = np.arccos(cos_angle)
+    return np.degrees(angle_rad)
+
+
+def _optimal_continuous_symmetry_rotation(R_pred, R_gt, axis):
+    """Find the rotation angle around axis that minimizes geodesic(R_pred, R_gt @ R(axis, θ)).
+
+    Returns (error_deg, R_sym_best).
+    """
+    M = R_pred.T @ R_gt
+    K_mat = np.array([
+        [0, -axis[2], axis[1]],
+        [axis[2], 0, -axis[0]],
+        [-axis[1], axis[0], 0]
+    ])
+    K2 = K_mat @ K_mat
+    tr_MK = np.trace(M @ K_mat)
+    tr_MK2 = np.trace(M @ K2)
+    B = -tr_MK2
+    C = tr_MK
+    theta_best = np.arctan2(C, B)
+    cos_t = np.cos(theta_best)
+    sin_t = np.sin(theta_best)
+    R_sym = np.eye(3) + sin_t * K_mat + (1 - cos_t) * K2
+    err = geodesic_rotation_error(R_pred, R_gt @ R_sym)
+    return err, R_sym
+
+
+def min_symmetry_rotation_error(R_pred, R_gt, symmetry_transforms, continuous_axes=None):
+    """Compute minimum rotation error over all symmetry-equivalent GT poses.
+
+    Args:
+        R_pred: [3, 3] predicted rotation matrix
+        R_gt: [3, 3] ground truth rotation matrix
+        symmetry_transforms: list of [4, 4] discrete symmetry transform matrices
+        continuous_axes: optional list of [3] unit axis vectors for continuous symmetries
+
+    Returns:
+        (min_error_deg, best_sym_R)
+    """
+    min_err = float('inf')
+    best_R = np.eye(3)
+    for S in symmetry_transforms:
+        R_sym = S[:3, :3]
+        err = geodesic_rotation_error(R_pred, R_gt @ R_sym)
+        if err < min_err:
+            min_err = err
+            best_R = R_sym
+    if continuous_axes:
+        for axis in continuous_axes:
+            err, R_sym = _optimal_continuous_symmetry_rotation(R_pred, R_gt, axis)
+            if err < min_err:
+                min_err = err
+                best_R = R_sym
+    return min_err, best_R

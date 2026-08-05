@@ -603,7 +603,6 @@ def create_test_loader(args):
         is_train=False,
         scene=args.scene,
         index=args.index,
-        data_root=getattr(args, 'data_root', None),
     )
 
     test_loader = DataLoader(
@@ -638,7 +637,7 @@ def create_bop_test_loader(args):
     loader, samples = get_bop_test_dali_loader(
         bop_root=args.bop_root,
         obj_id=args.obj_id,
-        sensor=getattr(args, 'sensor', 'ensenso'),
+        sensor=None if getattr(args, 'sensor', None) in (None, '', 'all') else args.sensor,
         keypoints_dir=getattr(args, 'keypoints_dir', 'keypoints'),
         scene_ids=scene_ids,
         batch_size=args.batch_size,

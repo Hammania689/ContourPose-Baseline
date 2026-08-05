@@ -16,8 +16,10 @@ then
     chmod a+r $XAUTH
 fi
 
-data_path=/mnt/bigbertha_mount/data
-container_name=contourpose-baseline-4090
+data_path=/data
+contourpose_data_path=/home/ham/GithubWorkspace/ContourPose/data
+container_name=contourpose-baseline
+wandb_login=/home/ham/.netrc
 img_name=$container_name
 
 
@@ -28,12 +30,13 @@ docker run -it \
 	--volume=$XSOCK:$XSOCK:rw \
         --volume=$XAUTH:$XAUTH:rw \
 	--volume=$data_path:/data \
-	--volume=/mnt/bigbertha_mount/data/Datasets/ContourPose/SUN2012pascalformat:/data/Datasets/ContourPose/SUN2012pascalformat \
+        --volume=$PWD:/$container_name \
+	--volume=$contourpose_data_path:/$container_name/data \
+	--volume=$wandb_login:/root/.netrc \
 	-p=9000:9000/tcp \
 	-p=7000:7000/tcp \
         --volume=/dev:/dev \
         --privileged \
-        --volume=$PWD:/$container_name \
         -w /$container_name \
 	--env="XAUTHORITY=$XAUTH" \
 	--env="DISPLAY=$DISPLAY" \
@@ -43,3 +46,4 @@ docker run -it \
 	--env="NVIDIA_DRIVER_CAPABILITIES=all" \
 	$img_name \
 	bash
+#--volume=/data/Datasets/ContourPose/SUN2012pascalformat:/data/Datasets/ContourPose/SUN2012pascalformat \

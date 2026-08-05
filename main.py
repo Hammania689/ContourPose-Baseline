@@ -1,4 +1,6 @@
 import os
+import warnings
+warnings.filterwarnings("ignore", message="pkg_resources is deprecated")
 import torch
 import numpy as np
 from network import ContourPose
@@ -124,7 +126,7 @@ def main(args):
     wd_params, no_wd_params = get_wd_params(ContourNet)
     optimizer = torch.optim.AdamW([{'params': list(no_wd_params), 'weight_decay': 0}, {'params': list(wd_params)}],
                                   lr=args.lr, weight_decay=0.1)
-    model_path = os.path.join(os.getcwd(), "model", args.class_type)
+    model_path = args.model_dir
 
     if args.train:
         # start_epoch= 1
@@ -158,6 +160,8 @@ if __name__ == '__main__':
     parser.add_argument("--train", type=bool, default=False)
     parser.add_argument("--gpu_id", help="GPU_ID", type=str, default="0")
     parser.add_argument("--used_epoch", type=int, default=-1)
+    parser.add_argument("--model_dir", type=str, required=True,
+                        help="Directory containing checkpoint .pkl files (e.g. model/paper_checkpoints/obj1)")
     # The sceneObjs.yml file shows that obj1 is in scene with an index of 2
     parser.add_argument("--scene", type=int, default=13)
     parser.add_argument("--index", type=int, default=2)

@@ -60,7 +60,7 @@ code for paper "ContourPose：A monocular 6D pose estimation method for reflecti
 
 | Indexing of objects in the paper (dataset) | obj1  |obj2     |   obj3  |   obj4  |  obj5   |  obj6   |   obj7  |  obj8   |   obj9  |  obj10   |
 |--------------------------------------------| ----  |-----|-----|-----|-----|-----|-----|-----|-----|-----|
-| Actual indexing of objects in this code    | obj1 |  obj2   |  obj3   |  obj7   |   obj13  |   obj16  |  obj18   |  obj18   |  obj21   |   obj32  |
+| Actual indexing of objects in this code    | obj1 |  obj2   |  obj3   |  obj7   |   obj13  |   obj16  |  obj18   |  obj6    |  obj21   |   obj32  |
    
    The test scenes in which the target object is tested can be found in the `sceneObjs.yml`  file.
 ## Pretrained model

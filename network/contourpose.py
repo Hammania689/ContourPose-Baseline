@@ -121,9 +121,13 @@ class ContourPose(torch.nn.Module):
 
 
     def _init_geo_info(self):
+        # Skip when running under the legacy eval.py pipeline (no data_root/class_type)
+        if self.data_root is None or self.class_type is None:
+            return
+
         # Load 3D keypoints (cached)
         if not hasattr(self, 'keypoints_3d'):
-            self.keypoints_3d = np.loadtxt(os.path.join(self.data_root, f"keypoints/{self.class_type}.txt")) * 1000  # m → mm (consistent with pts_3d and BOP cam_t_m2c)
+            self.keypoints_3d = np.loadtxt(os.path.join(self.data_root, f"keypoints/{self.class_type}.txt"))
 
         # Load 3D contour points (cached in memory after first call)
         if not hasattr(self, 'pts_3d'):
@@ -656,7 +660,12 @@ class ContourPose(torch.nn.Module):
         self.load_state_dict(state_dict, strict=strict)
 
         if is_old_format:
-            return {'epoch': 0, 'best_pose_error': float('inf')}
+            epoch_from_path = 0
+            try:
+                epoch_from_path = int(ckpt_path.stem)
+            except (ValueError, AttributeError):
+                pass
+            return {'epoch': epoch_from_path, 'best_pose_error': float('inf')}
 
         # Load optimizer state dict
         if 'optimizer' in checkpoint:
