@@ -1,5 +1,4 @@
-## Evaluator fixes, analysis scripts, and rotation error utilities
-`fd28ae3`
+## fd28ae3 - Evaluator fixes, analysis scripts, and rotation error utilities
 
 ### Fixed
 - `eval.py` (`evaluate`): Was returning `None` silently; now returns a metrics dict
@@ -36,8 +35,7 @@
 
 ---
 
-## Legacy eval pipeline and LaTeX table notebook
-`fd28ae3`
+## fd28ae3 - Legacy eval pipeline and LaTeX table notebook
 
 ### Added
 - `test_legacy_eval.py`: Duplicate of `test.py` that uses `eval.py` (the original
@@ -67,8 +65,7 @@
 
 ---
 
-## Add train_all_objects.sh
-`f4378f0`
+## f4378f0 - Add train_all_objects.sh
 
 ### Added
 - `train_all_objects.sh`: Shell script that runs `train_bop.py` sequentially for all
@@ -82,8 +79,7 @@
 
 ---
 
-## Add Docker environment
-`df910c3`
+## df910c3 - Add Docker environment
 
 ### Added
 - `docker/`: Dockerfiles and build/start scripts for two environments — a generic
@@ -102,8 +98,7 @@
 
 ---
 
-## Refactor network.py into network/ package
-`1d2f982`
+## 1d2f982 - Refactor network.py into network/ package
 
 ### Changed
 - `network.py`: Deleted.
@@ -117,8 +112,7 @@
 
 ---
 
-## Add BOP training stack with StepLR scheduling
-`69e09de`
+## 69e09de - Add BOP training stack with StepLR scheduling
 
 ### Added
 - `train_bop.py`: BOP-enabled training script derived from upstream `main.py`. Adds DALI
@@ -162,8 +156,7 @@
 
 ---
 
-## Add .gitignore
-`c7d257b` `239fa00`
+## c7d257b 239fa00 - Add .gitignore
 
 ### Added
 - `.gitignore`: Excludes trained model checkpoints (`model/`), experiment logs (`wandb/`),
