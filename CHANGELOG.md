@@ -1,4 +1,4 @@
-## fix(data_utils): forward background_dir to BOP val loaders
+## a0d85c7 - Forward background_dir to BOP val loaders + loader-comparison doc
 
 ### Fixed
 - `dataset/data_utils.py:create_bop_validation_setup`: both `fixed_val_loader`
@@ -31,7 +31,7 @@
 
 ---
 
-## feat(scripts): BOP training driver for obj2/6/13/18
+## 2c9966b - Add BOP training driver for obj2/6/13/18
 
 ### Added
 - `train_bop_4objs.sh`: 4-object driver script mirroring
