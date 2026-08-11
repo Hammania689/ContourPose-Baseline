@@ -25,3 +25,21 @@ CLAUDE.md
 
 # Original-file backups (history lives in git)
 *_og.py
+utils/utils.py_
+
+# Env-local
+.python-version
+docker/start_container_4090
+
+# NFS lock artifacts
+.nfs*
+**/.nfs*
+
+# Editor / kernel cruft
+**/.ipynb_checkpoints/
+
+# Caches
+dataset/bg_imgs.npy
+
+# Sweep and eval outputs
+results/
