@@ -93,8 +93,24 @@ class BOPDALIPipeline(Pipeline):
         random.seed(seed)
         np.random.seed(seed)
 
-        # Load 3D keypoints
-        self.keypoints_3d = np.loadtxt(keypoints_path).astype(np.float32) * 1000  # m → mm (consistent with BOP cam_t_m2c)
+        # Load 3D keypoints — DALI path is mm-native (matches BOP cam_t_m2c).
+        # Files named *_mm.txt are assumed to already be in millimetres; legacy
+        # metre files are converted at load time for back-compat.
+        kp_raw = np.loadtxt(keypoints_path).astype(np.float32)
+        assert kp_raw.ndim == 2 and kp_raw.shape[1] == 3, (
+            f"[BOP DALI] Expected (N, 3) keypoints, got {kp_raw.shape} "
+            f"from {keypoints_path}"
+        )
+        if Path(keypoints_path).stem.endswith("_mm"):
+            self.keypoints_3d = kp_raw
+        else:
+            print(f"[BOP DALI] Legacy metre-scale keypoints; multiplying by 1000 → mm")
+            self.keypoints_3d = kp_raw * 1000.0
+        assert np.max(np.abs(self.keypoints_3d)) > 1.0, (
+            f"[BOP DALI] Keypoints look like metres after conversion "
+            f"(max |xyz| = {np.max(np.abs(self.keypoints_3d)):.4f}); expected mm. "
+            f"Source: {keypoints_path}"
+        )
         self.num_keypoints = len(self.keypoints_3d)
         print(f"[BOP DALI] Loaded {self.num_keypoints} keypoints from {keypoints_path}")
 
@@ -606,7 +622,13 @@ def get_bop_dali_loader(
     else:
         base_dir = data_path / keypoints_dir
 
+    # Prefer *_mm.txt (BOP mm convention). Legacy metre files still work
+    # (converted at load time), but the _mm variant avoids a runtime multiply
+    # and makes the on-disk units unambiguous.
     candidates = [
+        base_dir / f"obj_{obj_id:06d}_mm.txt",
+        base_dir / f"obj{obj_id}_mm.txt",
+        base_dir / f"{obj_id}_mm.txt",
         base_dir / f"obj_{obj_id:06d}.txt",
         base_dir / f"obj{obj_id}.txt",
         base_dir / f"{obj_id}.txt",
@@ -614,9 +636,13 @@ def get_bop_dali_loader(
 
     # Also try finding any .txt file if there's only one (custom naming like gear.txt)
     if base_dir.exists():
-        txt_files = list(base_dir.glob("*.txt"))
-        if len(txt_files) == 1:
-            candidates.insert(0, txt_files[0])
+        mm_files = list(base_dir.glob("*_mm.txt"))
+        if len(mm_files) == 1:
+            candidates.insert(0, mm_files[0])
+        else:
+            txt_files = list(base_dir.glob("*.txt"))
+            if len(txt_files) == 1:
+                candidates.insert(0, txt_files[0])
 
     for candidate in candidates:
         if candidate.exists():

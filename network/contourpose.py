@@ -12,6 +12,28 @@ from utils.visualization import visualize_batch_with_pose
 from dataset.DALIDataset import generate_heatmaps_gpu
 
 
+def _load_mm_xyz(data_root, subdir, class_type, tag):
+    """Load an mm-scale (N, 3) xyz file from data_root/subdir/, preferring
+    {class_type}_mm.txt over the legacy {class_type}.txt. Asserts mm scale
+    on load so silent metre-scale files can't leak into pnp downstream."""
+    mm_path = os.path.join(data_root, subdir, f"{class_type}_mm.txt")
+    legacy_path = os.path.join(data_root, subdir, f"{class_type}.txt")
+    for path in (mm_path, legacy_path):
+        if os.path.exists(path):
+            arr = np.loadtxt(path)
+            assert np.max(np.abs(arr)) > 1.0, (
+                f"[{tag}] {subdir} file {path} looks like metres "
+                f"(max |xyz| = {np.max(np.abs(arr)):.4f}); expected mm. "
+                f"Regenerate via scripts/convert_keypoints_to_mm.py."
+            )
+            return arr
+    raise FileNotFoundError(
+        f"[{tag}] {subdir}/{class_type}_mm.txt not found under {data_root} "
+        f"(also tried legacy {subdir}/{class_type}.txt). "
+        f"Run scripts/convert_keypoints_to_mm.py --object {class_type}."
+    )
+
+
 @gin.configurable
 class ContourPose(torch.nn.Module):
     def __init__(self,
@@ -125,13 +147,16 @@ class ContourPose(torch.nn.Module):
         if self.data_root is None or self.class_type is None:
             return
 
-        # Load 3D keypoints (cached)
+        # Load 3D keypoints and Valid3D — both mm-native to match BOP cam_t_m2c.
+        # Prefer *_mm.txt (populated by scripts/convert_keypoints_to_mm.py) and
+        # assert on load so silent metre-scale files can't reach pnp downstream.
         if not hasattr(self, 'keypoints_3d'):
-            self.keypoints_3d = np.loadtxt(os.path.join(self.data_root, f"keypoints/{self.class_type}.txt"))
+            self.keypoints_3d = _load_mm_xyz(
+                self.data_root, "keypoints", self.class_type, "ContourPose")
 
-        # Load 3D contour points (cached in memory after first call)
         if not hasattr(self, 'pts_3d'):
-            self.pts_3d = np.loadtxt(os.path.join(self.data_root, f"Valid3D/{self.class_type}.txt"))  # Already in mm
+            self.pts_3d = _load_mm_xyz(
+                self.data_root, "Valid3D", self.class_type, "ContourPose")
 
         self.object_diameter = np.linalg.norm(self.keypoints_3d.max(axis=0) - self.keypoints_3d.min(axis=0))
 
