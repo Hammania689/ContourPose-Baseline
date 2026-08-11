@@ -17,7 +17,15 @@ os.environ["KMP_DUPLICATE_LIB_OK"] = "True"
 blender_K = np.array([[700.0, 0.0, 320.0], [0.0, 700.0, 240.0], [0.0, 0.0, 1.0]])
 
 class MyDataset(Dataset):
-    def __init__(self, root, cls, is_train=True, scene=None, index=None):
+    def __init__(self, root, cls, is_train=True, scene=None, index=None,
+                 render_dir=None, render_edge_dir=None, sun_path=None):
+        """Path-override kwargs (optional, default None → legacy layout):
+          render_dir       — explicit path to renders (default: {root}/train/renders/{cls})
+          render_edge_dir  — explicit path to render edges (default: {root}/train/renders/gtEdge/{cls})
+          sun_path         — explicit SUN2012 root (default: {root}/SUN2012pascalformat)
+        Used by the loader-comparison harness so we don't have to symlink datasets
+        into the legacy layout.
+        """
         super(MyDataset, self).__init__()
         self.root = root
         self.test_root = osp.join(self.root, "test")
@@ -28,17 +36,25 @@ class MyDataset(Dataset):
 
         self.scene = scene
         self.index = index
+        self._render_dir_override = render_dir
+        self._render_edge_dir_override = render_edge_dir
         self.corners = np.loadtxt(os.path.join(os.getcwd(), "keypoints/{}.txt".format(cls)))  # KEYPOINTS
         self.element = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
         self.bg_imgs_path = os.path.join(os.getcwd(), "dataset/bg_imgs.npy")
-        self.sun_path = os.path.join(root, "SUN2012pascalformat")
+        self.sun_path = sun_path if sun_path is not None else os.path.join(root, "SUN2012pascalformat")
         self.get_bg_imgs()
         self.bg_imgs = np.load(self.bg_imgs_path).astype(np.str)
 
         if is_train:
             self.path = osp.join(self.root, "train", self.cls)
-            self.K = yaml.safe_load(open(osp.join(self.path, 'Intrinsic.yml'), 'r'))
-            self.train_pose = yaml.safe_load(open(osp.join(self.path, 'gt.yml'), 'r'))
+            # Real-branch metadata is only needed when photo_cut/ real photos exist.
+            # Guarded so datasets shipping renders-only (no photo_cut/, no gt.yml,
+            # no Intrinsic.yml) still work — the render branch uses hardcoded
+            # blender_K and per-frame poses from {idx}_RT.pkl.
+            intrinsic_path = osp.join(self.path, 'Intrinsic.yml')
+            gt_path        = osp.join(self.path, 'gt.yml')
+            self.K = yaml.safe_load(open(intrinsic_path, 'r')) if osp.exists(intrinsic_path) else {}
+            self.train_pose = yaml.safe_load(open(gt_path, 'r')) if osp.exists(gt_path) else {}
             self.data_paths = self.get_train_data_path(self.root, self.cls)
 
         else:
@@ -51,16 +67,21 @@ class MyDataset(Dataset):
         paths_list = []
         paths = {}
 
-        count = os.listdir(osp.join(self.path, "photo_cut"))
-        train_inds = [int(ind.replace(".png", "")) for ind in count]
-        train_inds.sort()
+        # Real-photo pool is optional — skip if photo_cut/ isn't present so
+        # renders-only datasets still work.
+        photo_cut_dir = osp.join(self.path, "photo_cut")
+        if osp.isdir(photo_cut_dir):
+            count = os.listdir(photo_cut_dir)
+            train_inds = sorted(int(ind.replace(".png", "")) for ind in count)
+        else:
+            train_inds = []
 
-        train_img_path = osp.join(self.path, "photo_cut")
+        train_img_path = photo_cut_dir
         mask_path = osp.join(self.path, "mask")  # use test data train
         edge_path = osp.join(self.path, "gtEdge")
 
-        render_dir = osp.join(root, "train", "renders", cls)
-        render_edge_dir = osp.join(root, "train", "renders", "gtEdge", cls)
+        render_dir = self._render_dir_override or osp.join(root, "train", "renders", cls)
+        render_edge_dir = self._render_edge_dir_override or osp.join(root, "train", "renders", "gtEdge", cls)
         render_num = len(glob.glob(osp.join(render_dir, "*.pkl")))
 
         for idx in train_inds:
@@ -141,15 +162,26 @@ class MyDataset(Dataset):
             return img, pose, K
 
     def get_bg_imgs(self):
+        # Invalidate stale caches — bg_imgs.npy stores absolute paths that
+        # break when the SUN2012 mount moves (e.g. across Docker containers).
+        # Regenerate if the cached first entry no longer resolves or its
+        # directory doesn't match the current sun_path.
+        stale = False
         if os.path.exists(self.bg_imgs_path):
-            return
+            try:
+                cached = np.load(self.bg_imgs_path).astype(np.str)
+                if len(cached) == 0 or not os.path.exists(str(cached[0])):
+                    stale = True
+                elif not str(cached[0]).startswith(self.sun_path):
+                    stale = True
+            except Exception:
+                stale = True
+            if not stale:
+                return
+            os.remove(self.bg_imgs_path)
 
         img_paths = glob.glob(os.path.join(self.sun_path, 'JPEGImages/*'))
-        bg_imgs = []
-
-        for img_path in tqdm(img_paths):
-            bg_imgs.append(img_path)
-
+        bg_imgs = list(tqdm(img_paths))
         np.save(self.bg_imgs_path, bg_imgs)
 
     def random_background(self, img, mask):
