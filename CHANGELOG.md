@@ -1,3 +1,152 @@
+## d03f6e6 - Add latex table generation from eval results.csv
+
+### Added
+- `scripts/make_latex_table.ipynb` + `scripts/make_latex_table_tmp.py`:
+  notebook + throwaway helper for producing paper-formatted LaTeX tables
+  from aggregated `results.csv` (both legacy and BOP eval pipelines emit
+  compatible schemas). Kept for reproducibility of the paper submission.
+
+---
+
+## b625394 - Add visualization and inspection utilities
+
+### Added
+- `scripts/visualize_bop_test_batch.py`: pulls one batch from the BOP test
+  DALI loader and renders per-sample grids (RGB / mask / heatmap overlay /
+  GT-pose mesh projection). Confirms K, pose, keypoints, and heatmap peaks
+  are all self-consistent after mm-scale unit fixes.
+- `scripts/visualize_annotations.py`: annotation viz for the RT-Less test set.
+- `scripts/visualize_inference.py`: overlays predicted pose on RGB, saves
+  per-frame PNGs from a completed eval run's CSV.
+- `scripts/inspect_bop_converted_data.py`: prints scene_gt.json /
+  scene_camera.json summaries for a per-object BOP root; sanity check for
+  `rtless_test_to_bop.py` output.
+
+---
+
+## 350622c - Add tests/README.md covering both characterization suites
+
+### Added
+- `tests/README.md`: index describing the `pecp_variance/` and
+  `loader_comparison/` suites — what question each one answers, run
+  recipes, output layouts, interpretation notes.
+
+---
+
+## 38a766e - Add PECP variance characterization suite
+
+### Added
+- `tests/pecp_variance/run_sweep.sh`: harness that runs `test.py` for
+  NUM_SEEDS seeds × 10 objects (plus an obj21 excl-scene-29 variant), each
+  with `--eval_seed {k}`. Writes to
+  `results/rtless_bop_variance/{ts}_pecp/seed{k}/{obj}/`.
+- `tests/pecp_variance/aggregate.py`: consumes the sweep output and writes
+  `variance_raw.csv` (per-run, per-scene — saved so CIs can be recomputed
+  without re-running), `variance_summary.csv` (mean/std/min/max over
+  seeds), and `variance_report.txt` (sanity checks: seed diversity,
+  reference numbers inside range, per-object std ranking).
+
+Depends on the `--eval_seed` hook added to `test.py` in commit f5ea8d8.
+
+---
+
+## fa4adbc - Add legacy vs BOP DALI loader characterization suite
+
+### Added
+- `tests/loader_comparison/`: characterization suite that draws N samples
+  from both loaders independently and compares distributions (rotation,
+  translation, per-keypoint 2D, photometric). Assigns a coverage verdict
+  per quantity: `a-match` / `b-BOP-covers-legacy` / `c-gap`. Also runs a
+  per-loader invariant check (projection ↔ heatmap peak) — expected to
+  fail on legacy due to the 2D-warp decoupling documented in CLAUDE.md,
+  expected sub-pixel on BOP DALI.
+  - `sample_poses.py`: samples one loader, dumps NPZ.
+  - `compare_distributions.py`: reads two NPZs, writes report + histograms.
+  - `run_sweep.sh`: orchestrates a 10-object sweep with matched
+    configuration (both loaders receive SUN2012 backgrounds at load time).
+
+### Changed
+- `dataset/Dataset.py` (`MyDataset`): `render_dir` / `render_edge_dir` /
+  `sun_path` kwargs to override the legacy layout so the harness can point
+  at renders that don't live under `{root}/train/`. Constructor guards on
+  `Intrinsic.yml` / `gt.yml` / `photo_cut/` so renders-only datasets work.
+  `get_bg_imgs` invalidates stale `bg_imgs.npy` caches (paths that no
+  longer resolve or don't share the current `sun_path` prefix) instead of
+  blindly reusing them across container mounts.
+
+---
+
+## d523ba5 - Add BOP-format eval aggregator matching legacy accounting
+
+### Added
+- `scripts/aggregate_bop_results.py`: post-processes `test.py`'s per-object
+  detailed CSVs into `results.csv` + `summary.txt` matching the legacy
+  `results/rtless/authors_checkpoints/{ts}_pecp/` schema. Uses the same
+  legacy accounting convention: per-axis errors are only averaged over
+  frames where ADD passed (`eval.py:calculate_tra_and_rot` skips failed
+  frames), and NaN values are masked via `nanmean`. Auto-detects
+  `rgb_detailed.csv` vs `masked_detailed.csv` based on which one `test.py`
+  produced.
+
+The related `test.py --use_masks` default flip (from `"true"` to `"false"`
+so the DALI test loader reads `rgb/` as-is, matching the legacy eval's
+input distribution) is part of commit f5ea8d8.
+
+---
+
+## 4a3e147 - Enforce mm-scale keypoints in BOP DALI + eval paths
+
+The legacy `keypoints/{obj}.txt` and `Valid3D/{obj}.txt` files are in
+metres, but BOP `cam_t_m2c` is in mm. Silently mixing the two produced
+silently wrong PnP results.
+
+### Added
+- `scripts/convert_keypoints_to_mm.py`: one-shot writer for
+  `keypoints/{obj}_mm.txt` and `Valid3D/{obj}_mm.txt` files (multiplies
+  repo-root metre-scale files by 1000). Idempotent.
+- `scripts/rtless_test_to_bop.py`: RT-Less native → BOP-format converter
+  for the test split. Writes mm-scale keypoints and Valid3D per-object as
+  part of the conversion so downstream loaders see self-consistent data.
+
+### Changed
+- `dataset/BOPDALIDataset.py`, `dataset/BOPTestDALIDataset.py`,
+  `network/contourpose.py`: keypoint and Valid3D loaders prefer
+  `{obj}_mm.txt` over the legacy `{obj}.txt`, and assert `max |xyz| > 1.0`
+  on load so silent metre-scale files can't reach PnP by accident. Error
+  messages point at `convert_keypoints_to_mm.py`.
+- `eval_spectra_pose.py::_init_bop_format`: same mm-scale enforcement for
+  keypoints and Valid3D. CAD-file search falls back to repo-root `cad/`
+  and auto-scales metre-scale PLYs to mm on load to match BOP
+  `cam_t_m2c` and the mm-scale keypoints.
+
+---
+
+## f5ea8d8 - Add BOP eval pipeline (loaders, evaluator, orchestrators)
+
+### Added
+- `test.py` / `test_legacy_eval.py`: DALI-based test drivers. `test.py`
+  exposes `--eval_seed` for the PECP variance suite (see commit 38a766e)
+  and defaults `--use_masks false` to match the legacy input distribution
+  (see commit d523ba5).
+- `eval_spectra_pose.py`: evaluator class supporting both BOP and legacy
+  formats, with symmetry-aware rotation error and per-instance CSV output.
+- `dataset/BOPTestDALIDataset.py`: multi-scene, multi-sensor test loader.
+- `dataset/bop_config.py`: `models_info.json` parser (diameters, symmetries).
+- `eval_rtless_bop.sh`, `eval_all_rtless.sh`, `eval_all_rtless_legacy.sh`:
+  sweep orchestrators. `eval_rtless_bop.sh` writes to a timestamped run
+  dir and invokes `scripts/aggregate_bop_results.py` at the end.
+
+---
+
+## 585bb8c - Add .gitignore entries for env-local files, caches, and outputs
+
+### Added
+- `.gitignore`: NFS lock artifacts, `dataset/bg_imgs.npy` cache,
+  `results/` sweep outputs, `.python-version`, `docker/start_container_4090`,
+  `utils/utils.py_`, and `.ipynb_checkpoints/`.
+
+---
+
 ## edd14bc - Add eval_legacy_all_scenes.py, eval_rtless_authors.sh, and RT_Less.md
 
 ### Added
