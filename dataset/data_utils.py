@@ -740,7 +740,9 @@ def create_bop_validation_setup(args, num_gpus: int = 2) -> Dict[str, Any]:
         compute_edge_input=compute_edge_input,
     )
 
-    # Create fixed validation loader - deterministic ordering, no background aug
+    # Create fixed validation loader - deterministic ordering
+    # background_dir is forwarded so wandb viz reflects the training input
+    # distribution; seed=1111 keeps bg selection stable across epochs.
     print("[BOP Cross-Validation] Creating fixed validation loader")
     fixed_val_loader = get_bop_dali_loader(
         data_dir=args.bop_root,
@@ -752,12 +754,12 @@ def create_bop_validation_setup(args, num_gpus: int = 2) -> Dict[str, Any]:
         seed=1111,  # Fixed seed for deterministic ordering
         img_size=img_size,
         heatmap_dir=getattr(args, 'heatmap_dir', None),
-        background_dir=None,  # No background aug in validation — saves GPU memory
+        background_dir=getattr(args, 'background_dir', None),
         file_indices=val_indices,
         compute_edge_input=compute_edge_input,
     )
 
-    # Create random validation loader - different seed each run for variety, no background aug
+    # Create random validation loader - different seed each run for variety
     import time
     random_seed = int(time.time()) % 10000
     print(f"[BOP Cross-Validation] Creating random validation loader (seed={random_seed})")
@@ -771,7 +773,7 @@ def create_bop_validation_setup(args, num_gpus: int = 2) -> Dict[str, Any]:
         seed=random_seed,  # Time-based seed for variety
         img_size=img_size,
         heatmap_dir=getattr(args, 'heatmap_dir', None),
-        background_dir=None,  # No background aug in validation — saves GPU memory
+        background_dir=getattr(args, 'background_dir', None),
         file_indices=val_indices,  # Same data, different order
         compute_edge_input=compute_edge_input,
     )

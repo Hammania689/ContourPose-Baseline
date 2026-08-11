@@ -1,3 +1,51 @@
+## fix(data_utils): forward background_dir to BOP val loaders
+
+### Fixed
+- `dataset/data_utils.py:create_bop_validation_setup`: both `fixed_val_loader`
+  and `random_val_loader` now forward `getattr(args, 'background_dir', None)`
+  instead of hardcoding `background_dir=None`. Previously the wandb viz
+  panel showed black-background thumbnails even when the train loader was
+  compositing SUN2012 correctly, because the val loaders that produced the
+  viz batches skipped compositing entirely. `fixed_val_loader` keeps
+  `seed=1111` so the composited backgrounds are stable across epochs; only
+  `random_val_loader` (time-seeded, viz-only) varies its bg per epoch.
+
+### Added
+- `scripts/visualize_bop_train_batch.py`: sanity check that instantiates
+  the *training* DALI loader via `create_bop_validation_setup` (same code
+  path `train_bop.py` uses) and writes a per-sample 4-panel grid:
+  raw PBR from disk / mask overlay / DALI output (post-composite +
+  augmented) / |Δ| pixel diff. Prints diagnostics on `bg_files` count,
+  first-sample paths, and per-sample mean|Δ| so the two failure modes
+  ("bg_dir path is wrong" vs "augs are no-ops") are visible before opening
+  any PNG. Companion to `scripts/visualize_bop_test_batch.py`.
+- `docs/loader_comparison.md`: side-by-side reference for the legacy
+  `MyDataset` and BOP DALI `BOPDALIPipeline` loaders — file layouts, unit
+  conventions, augmentation pipelines with probabilities, determinism
+  guarantees, known gotchas (pose-heatmap invariant break on legacy,
+  silent bg no-op on BOP, keypoint unit auto-conversion), and a
+  when-to-use-which guide. The mechanical distribution comparison stays
+  in `tests/loader_comparison/`; this doc is the human-readable companion.
+- `RT_Less.md`: cross-reference pointing at `docs/loader_comparison.md`
+  for loader-specific engineering details.
+
+---
+
+## feat(scripts): BOP training driver for obj2/6/13/18
+
+### Added
+- `train_bop_4objs.sh`: 4-object driver script mirroring
+  `train_all_objects.sh` but restricted to `obj2, obj6, obj13, obj18`.
+  Points `BOP_ROOT` at the in-container path
+  `/contourpose-baseline-4090/data/RTLESS_BOP` (dataset root; `train_bop.py`
+  appends `train_pbr/{obj_id:06d}` internally), forwards
+  `--background_dir /data/SUN2012pascalformat/JPEGImages`, and uses the
+  paper-default gin config. Includes a commented-out smoke-run block
+  (`main.epochs = 2` + tight val/viz intervals) for quick validation
+  before committing to the full 150-epoch schedule.
+
+---
+
 ## d03f6e6 - Add latex table generation from eval results.csv
 
 ### Added

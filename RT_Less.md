@@ -35,6 +35,10 @@ has been placed in 1–3 test scenes by dataset design.
 
 Training data lives under `{root}/train/` and is split into real captures and synthetic renders.
 
+> For loader-side details (RT-Less native `MyDataset` vs BOP DALI
+> `BOPDALIPipeline` — units, augmentation pipelines, determinism guarantees,
+> known gotchas), see `docs/loader_comparison.md`.
+
 ### Real images — `{root}/train/{cls}/`
 
 ```
